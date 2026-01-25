@@ -8,27 +8,21 @@
     "test:functional": "playwright test --grep @functional",
     "test:visual": "playwright test --grep @visual",
     "test:a11y": "playwright test --grep @accessibility",
-    "test:chrome": "playwright test --project=chromium",
+    "test:chromium": "playwright test --project=chromium",
     "test:firefox": "playwright test --project=firefox",
     "test:webkit": "playwright test --project=webkit",
-    "test:mobile": "playwright test --project='Mobile Chrome' --project='Mobile Safari'",
+    "test:mobile": "playwright test --project=mobile-chrome --project=mobile-safari",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
     "test:ui": "playwright test --ui",
     "report": "playwright show-report reports/html",
+    "cleanup": "rimraf reports/* && mkdir -p reports/html",
     "lint": "eslint src tests --ext .ts",
     "lint:fix": "eslint src tests --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "prepare": "playwright install"
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\""
   },
-  "keywords": [
-    "playwright",
-    "e2e",
-    "testing",
-    "automation",
-    "typescript"
-  ],
+  "keywords": ["playwright", "e2e", "testing", "automation", "typescript"],
   "author": "",
   "license": "MIT",
   "devDependencies": {
@@ -41,6 +35,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-playwright": "^0.21.0",
     "prettier": "^3.1.1",
+    "rimraf": "^5.0.5",
     "typescript": "^5.3.3"
   },
   "engines": {
