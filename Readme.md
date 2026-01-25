@@ -4,7 +4,34 @@
 
 Комплексная система E2E автотестов для страницы виджета календаря мероприятий [3Snet](https://dev.3snet.info/eventswidget/).
 
+## 📋 Требования
+
+- **Node.js** >= 18.0.0
+- **npm** >= 9.0.0
+
 ## 🚀 Быстрый запуск
+
+### Windows (PowerShell / CMD)
+
+```powershell
+# 1. Клонирование репозитория
+git clone https://github.com/yhtyyar/events-calendar-widget-e2e-tests.git
+cd events-calendar-widget-e2e-tests
+
+# 2. Установка зависимостей
+npm install
+
+# 3. Установка браузеров Playwright
+npx playwright install
+
+# 4. Запуск тестов
+npm test
+
+# 5. Открыть отчет (опционально)
+npx playwright show-report reports/html
+```
+
+### Linux / macOS (Bash)
 
 ```bash
 # 1. Клонирование репозитория
@@ -14,8 +41,14 @@ cd events-calendar-widget-e2e-tests
 # 2. Установка зависимостей
 npm install
 
-# 3. Запуск тестов
+# 3. Установка браузеров Playwright (с системными зависимостями)
+npx playwright install --with-deps
+
+# 4. Запуск тестов
 npm test
+
+# 5. Открыть отчет (опционально)
+npx playwright show-report reports/html
 ```
 
 ## 📋 Покрытие функциональности
@@ -69,6 +102,8 @@ npm test
 
 ## 🔧 Команды запуска
 
+### Универсальные команды (Windows / Linux / macOS)
+
 ```bash
 # Все тесты
 npm test
@@ -94,6 +129,50 @@ npm run test:ui             # Интерактивный UI
 
 # Отчеты
 npm run report              # Открыть HTML-отчет
+```
+
+### Прямые команды Playwright
+
+```bash
+# Запуск конкретного теста
+npx playwright test tests/smoke/basic-rendering.spec.ts
+
+# Запуск с UI-режимом (интерактивный)
+npx playwright test --ui
+
+# Запуск с отображением браузера
+npx playwright test --headed
+
+# Запуск одного браузера
+npx playwright test --project=chromium
+
+# Запуск по тегу
+npx playwright test --grep @smoke
+npx playwright test --grep @functional
+
+# Генерация отчета
+npx playwright show-report reports/html
+```
+
+### Windows-специфичные команды (PowerShell)
+
+```powershell
+# Установка переменных окружения для отладки
+$env:DEBUG = "pw:api"
+npx playwright test --headed
+
+# Запуск с verbose-выводом
+npx playwright test --reporter=list
+```
+
+### Linux/macOS-специфичные команды (Bash)
+
+```bash
+# Установка переменных окружения для отладки
+DEBUG=pw:api npx playwright test --headed
+
+# Запуск в headless режиме (для CI/серверов без GUI)
+npx playwright test --headed=false
 ```
 
 ## 📊 Отчеты и артефакты
