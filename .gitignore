@@ -1,0 +1,36 @@
+# Зависимости
+node_modules/
+
+# Сборка
+dist/
+
+# Отчеты и артефакты тестов
+reports/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Логи
+*.log
+npm-debug.log*
+
+# Системные файлы
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Переменные окружения
+.env
+.env.local
+.env.*.local
+
+# Временные файлы
+*.tmp
+*.temp
+.cache/
