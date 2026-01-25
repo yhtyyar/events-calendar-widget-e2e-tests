@@ -1,4 +1,4 @@
-name: E2E Tests CI
+name: E2E Tests with Visual Artifacts
 
 on:
   push:
@@ -20,12 +20,14 @@ on:
 
 env:
   NODE_VERSION: '20'
+  ARTIFACTS_RETENTION_DAYS: 7
 
 jobs:
   # Основные E2E тесты
   test:
     name: E2E Tests (${{ matrix.browser }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -46,36 +48,69 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
-      - name: Run smoke tests
-        run: npx playwright test --grep @smoke --project=${{ matrix.browser }}
-        continue-on-error: true
-
-      - name: Run all tests
+      - name: Run tests
         run: npx playwright test --project=${{ matrix.browser }}
         continue-on-error: true
 
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
+      - name: Check artifacts size
+        id: size-check
         if: always()
-        with:
-          name: test-results-${{ matrix.browser }}
-          path: |
-            reports/
-            test-results/
-          retention-days: 30
+        run: |
+          if [ -d "test-artifacts" ]; then
+            ARTIFACT_SIZE=$(du -sm test-artifacts | cut -f1)
+            echo "Total artifacts size: ${ARTIFACT_SIZE} MB"
+            echo "artifact_size=${ARTIFACT_SIZE}" >> $GITHUB_OUTPUT
+            if [ $ARTIFACT_SIZE -gt 300 ]; then
+              echo "⚠️ WARNING: Artifacts exceed 300MB threshold!" >&2
+              echo "Consider reducing video retention or adding cleanup steps."
+            fi
+          else
+            echo "No test-artifacts directory found"
+            echo "artifact_size=0" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      - name: Cleanup large files before upload
+        if: always()
+        run: |
+          # Удаляем большие видео файлы (>10MB) для экономии места
+          find test-artifacts -name "*.webm" -size +10M -delete 2>/dev/null || true
+          # Удаляем trace.zip файлы
+          find test-artifacts -name "trace.zip" -delete 2>/dev/null || true
+        shell: bash
 
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report-${{ matrix.browser }}
-          path: reports/html/
-          retention-days: 30
+          name: html-report-${{ matrix.browser }}-${{ github.run_id }}
+          path: test-artifacts/html-report/
+          retention-days: ${{ env.ARTIFACTS_RETENTION_DAYS }}
+
+      - name: Upload visual artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-artifacts-${{ matrix.browser }}-${{ github.run_id }}
+          path: |
+            test-artifacts/
+            !test-artifacts/html-report/
+          retention-days: ${{ env.ARTIFACTS_RETENTION_DAYS }}
+
+      - name: Storage alert
+        if: always() && steps.size-check.outputs.artifact_size > 500
+        run: |
+          echo "::error::Critical: Artifacts size exceeds GitHub limit (500 MB per artifact)"
+          echo "Next steps:"
+          echo "1. Reduce video retention in playwright.config.ts"
+          echo "2. Add cleanup step for old artifacts"
+          echo "3. Consider cloud storage migration"
 
   # Тесты на мобильных устройствах
   test-mobile:
     name: Mobile E2E Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -92,18 +127,36 @@ jobs:
         run: npx playwright install --with-deps chromium webkit
 
       - name: Run mobile tests
-        run: npx playwright test --grep @mobile
+        run: npx playwright test --project="Mobile Chrome" --project="Mobile Safari"
         continue-on-error: true
 
-      - name: Upload mobile test results
+      - name: Check artifacts size
+        id: size-check-mobile
+        if: always()
+        run: |
+          if [ -d "test-artifacts" ]; then
+            ARTIFACT_SIZE=$(du -sm test-artifacts | cut -f1)
+            echo "Total artifacts size: ${ARTIFACT_SIZE} MB"
+            echo "artifact_size=${ARTIFACT_SIZE}" >> $GITHUB_OUTPUT
+          else
+            echo "artifact_size=0" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      - name: Cleanup large files before upload
+        if: always()
+        run: |
+          find test-artifacts -name "*.webm" -size +10M -delete 2>/dev/null || true
+          find test-artifacts -name "trace.zip" -delete 2>/dev/null || true
+        shell: bash
+
+      - name: Upload mobile artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results-mobile
-          path: |
-            reports/
-            test-results/
-          retention-days: 30
+          name: visual-artifacts-mobile-${{ github.run_id }}
+          path: test-artifacts/
+          retention-days: ${{ env.ARTIFACTS_RETENTION_DAYS }}
 
   # Сводный отчет
   report:
@@ -112,22 +165,22 @@ jobs:
     needs: [test, test-mobile]
     if: always()
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: all-reports/
-
       - name: Generate summary
         run: |
           echo "## 📊 Результаты тестирования" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Браузеры:" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Chromium" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Firefox" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ WebKit" >> $GITHUB_STEP_SUMMARY
+          echo "### 🖥️ Браузеры:" >> $GITHUB_STEP_SUMMARY
+          echo "- Chromium" >> $GITHUB_STEP_SUMMARY
+          echo "- Firefox" >> $GITHUB_STEP_SUMMARY
+          echo "- WebKit" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Мобильные устройства:" >> $GITHUB_STEP_SUMMARY
-          echo "- 📱 iPhone 12 (Safari)" >> $GITHUB_STEP_SUMMARY
-          echo "- 📱 Pixel 5 (Chrome)" >> $GITHUB_STEP_SUMMARY
+          echo "### 📱 Мобильные устройства:" >> $GITHUB_STEP_SUMMARY
+          echo "- iPhone 12 (Safari)" >> $GITHUB_STEP_SUMMARY
+          echo "- Pixel 5 (Chrome)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Подробные отчеты доступны в артефактах сборки." >> $GITHUB_STEP_SUMMARY
+          echo "### 📁 Артефакты:" >> $GITHUB_STEP_SUMMARY
+          echo "- **HTML-отчёты**: html-report-*" >> $GITHUB_STEP_SUMMARY
+          echo "- **Скриншоты**: visual-artifacts-*" >> $GITHUB_STEP_SUMMARY
+          echo "- **Срок хранения**: ${{ env.ARTIFACTS_RETENTION_DAYS }} дней" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Подробные отчеты доступны в разделе **Artifacts** на странице workflow." >> $GITHUB_STEP_SUMMARY

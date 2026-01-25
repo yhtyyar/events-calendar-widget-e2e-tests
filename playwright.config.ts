@@ -1,9 +1,27 @@
 import { defineConfig, devices } from '@playwright/test';
+import { mkdirSync } from 'fs';
+import { join } from 'path';
 
 /**
  * Конфигурация Playwright для E2E тестирования виджета календаря мероприятий.
  * Поддерживает кросс-браузерное тестирование и различные устройства.
+ * Включает настройки визуальной фиксации результатов.
  */
+
+// Директория для всех артефактов тестирования
+const ARTIFACTS_DIR = join(process.cwd(), 'test-artifacts');
+
+// Создаём папку для артефактов при запуске (если не существует)
+try {
+  mkdirSync(ARTIFACTS_DIR, { recursive: true });
+} catch {
+  // Папка уже существует или нет прав
+}
+
+// Генерируем уникальный ID для прогона тестов
+const TEST_RUN_ID = `run_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+process.env.TEST_RUN_ID = TEST_RUN_ID;
+
 export default defineConfig({
   // Директория с тестами
   testDir: './tests',
@@ -30,8 +48,11 @@ export default defineConfig({
 
   // Конфигурация репортеров
   reporter: [
-    ['html', { outputFolder: 'reports/html', open: 'never' }],
-    ['json', { outputFile: 'reports/results.json' }],
+    ['html', { 
+      outputFolder: `${ARTIFACTS_DIR}/html-report`, 
+      open: 'never' // Отключаем автоматическое открытие в CI
+    }],
+    ['json', { outputFile: `${ARTIFACTS_DIR}/results.json` }],
     ['list'],
   ],
 
@@ -43,11 +64,14 @@ export default defineConfig({
     // Сбор трейсов при первой повторной попытке
     trace: 'on-first-retry',
 
-    // Скриншоты при падении теста
-    screenshot: 'only-on-failure',
+    // Скриншоты всегда (для визуальной фиксации шагов)
+    screenshot: 'on',
 
-    // Запись видео при повторных попытках
-    video: 'on-first-retry',
+    // Видео только для упавших тестов (экономия места)
+    video: {
+      mode: 'retain-on-failure',
+      size: { width: 1280, height: 720 }
+    },
 
     // Игнорировать HTTPS ошибки
     ignoreHTTPSErrors: true,
@@ -102,5 +126,5 @@ export default defineConfig({
   ],
 
   // Директория для артефактов (скриншоты, видео, трейсы)
-  outputDir: 'reports/artifacts',
+  outputDir: `${ARTIFACTS_DIR}/screenshots`,
 });
