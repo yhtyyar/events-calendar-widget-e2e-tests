@@ -6,11 +6,49 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    # Запуск очистки каждую неделю в воскресенье в 00:00 UTC
+    - cron: '0 0 * * 0'
 
 env:
   NODE_VERSION: '20'
 
 jobs:
+  # Очистка старых артефактов (запускается по расписанию и вручную)
+  cleanup:
+    name: Cleanup old artifacts
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Delete old artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const artifacts = await github.rest.actions.listArtifactsForRepo({
+              owner,
+              repo,
+              per_page: 100
+            });
+            
+            const now = new Date();
+            const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 дней в миллисекундах
+            
+            for (const artifact of artifacts.data.artifacts) {
+              const createdAt = new Date(artifact.created_at);
+              const age = now - createdAt;
+              
+              if (age > maxAge) {
+                console.log(`Deleting artifact: ${artifact.name} (created: ${artifact.created_at})`);
+                await github.rest.actions.deleteArtifact({
+                  owner,
+                  repo,
+                  artifact_id: artifact.id
+                });
+              }
+            }
+            console.log('Cleanup completed');
+
   e2e:
     name: E2E (${{ matrix.project }})
     runs-on: ubuntu-latest
