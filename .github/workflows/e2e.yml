@@ -37,10 +37,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci || npm install
+        run: npm install
 
       - name: Install Playwright
         run: npx playwright install --with-deps ${{ matrix.browser }}
@@ -48,10 +47,18 @@ jobs:
       - name: Run tests
         run: npx playwright test --project=${{ matrix.project }}
 
-      - name: Upload report
+      - name: Upload Playwright report
         uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: report-${{ matrix.project }}
+          name: playwright-report-${{ matrix.project }}
           path: reports/
+          retention-days: 7
+
+      - name: Upload Allure results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results-${{ matrix.project }}
+          path: allure-results/
           retention-days: 7

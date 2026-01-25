@@ -13,8 +13,17 @@ export default defineConfig({
   workers: isCI ? 2 : undefined,
 
   reporter: isCI
-    ? [['github'], ['json', { outputFile: 'reports/results.json' }], ['html', { outputFolder: 'reports/html', open: 'never' }]]
-    : [['html', { outputFolder: 'reports/html', open: 'never' }], ['list']],
+    ? [
+        ['github'],
+        ['json', { outputFile: 'reports/results.json' }],
+        ['html', { outputFolder: 'reports/html', open: 'never' }],
+        ['allure-playwright', { outputFolder: 'allure-results' }],
+      ]
+    : [
+        ['html', { outputFolder: 'reports/html', open: 'never' }],
+        ['allure-playwright', { outputFolder: 'allure-results' }],
+        ['list'],
+      ],
 
   outputDir: 'reports/artifacts',
 

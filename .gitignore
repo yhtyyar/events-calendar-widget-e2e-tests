@@ -10,6 +10,8 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+allure-results/
+allure-report/
 
 # Логи
 *.log
