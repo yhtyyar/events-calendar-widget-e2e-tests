@@ -166,9 +166,3 @@ npm test
 | Mobile Safari: нет записи видео | Низкий | Используются только скриншоты |
 | Firefox: `isMobile` не поддерживается | Низкий | Device-тесты пропускаются в Firefox |
 | Динамический контент | Средний | Явные ожидания (`waitForSelector`, `waitForLoadState`) |
-
----
-
-## Лицензия
-
-MIT
