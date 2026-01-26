@@ -88,11 +88,52 @@ npm test
 
 ---
 
+## Локальный запуск
+
+Универсальный скрипт для локального запуска тестов:
+
+```bash
+# Smoke тесты (по умолчанию)
+./scripts/run-tests.sh smoke
+
+# Все браузеры кроме Safari
+./scripts/run-tests.sh browsers
+
+# Конкретный браузер
+./scripts/run-tests.sh chromium
+./scripts/run-tests.sh firefox
+
+# С видимым браузером
+./scripts/run-tests.sh smoke --headed
+
+# Режим отладки
+./scripts/run-tests.sh debug
+
+# Справка по командам
+./scripts/run-tests.sh help
+```
+
+---
+
+## Скриншоты при ошибках
+
+При падении тестов автоматически создаются скриншоты:
+
+- **Расположение:** `reports/artifacts/`
+- **Формат:** `test-failed-{N}.png`
+- **Конфигурация:** `screenshot: 'only-on-failure'` в `playwright.config.ts`
+
+Скриншоты также прикрепляются к HTML-отчёту для удобной локализации багов.
+
+---
+
 ## Структура проекта
 
 ```
 ├── config/              # Централизованные тестовые данные
 │   └── test-data.ts     # URLs, viewports, expected texts
+├── scripts/             # Скрипты для локального запуска
+│   └── run-tests.sh     # Универсальный скрипт запуска
 ├── src/
 │   ├── pages/           # Page Object Model
 │   │   ├── BasePage.ts  # Базовый класс
@@ -107,6 +148,9 @@ npm test
 │   ├── functional/      # Функциональные (9)
 │   ├── visual/          # Адаптивные (10)
 │   └── accessibility/   # A11Y (11)
+├── reports/             # Отчёты и артефакты (gitignored)
+│   ├── artifacts/       # Скриншоты при ошибках
+│   └── html/            # HTML-отчёт Playwright
 └── docs/                # Документация
     ├── TEST_PLAN.md     # Детальный тест-план
     └── SETUP_GUIDE.md   # Инструкция по установке
