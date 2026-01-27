@@ -166,6 +166,7 @@ export async function measureExecutionTime<T>(
 
 /**
  * Retry-обертка для нестабильных операций.
+ * Поддерживает экспоненциальную задержку и условный retry.
  */
 export async function withRetry<T>(
   operation: () => Promise<T>,
@@ -173,9 +174,19 @@ export async function withRetry<T>(
     maxAttempts?: number;
     delayMs?: number;
     operationName?: string;
+    exponentialBackoff?: boolean;
+    shouldRetry?: (error: Error) => boolean;
+    onRetry?: (attempt: number, error: Error) => void;
   } = {}
 ): Promise<T> {
-  const { maxAttempts = 3, delayMs = 1000, operationName = 'операция' } = options;
+  const { 
+    maxAttempts = 3, 
+    delayMs = 1000, 
+    operationName = 'операция',
+    exponentialBackoff = false,
+    shouldRetry = () => true,
+    onRetry,
+  } = options;
   const log = logger.child('withRetry');
   
   let lastError: Error | undefined;
@@ -185,15 +196,97 @@ export async function withRetry<T>(
       return await operation();
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      log.warn(`Попытка ${attempt}/${maxAttempts} для "${operationName}" завершилась неудачей`);
+      
+      // Проверяем нужно ли делать retry
+      if (!shouldRetry(lastError)) {
+        log.warn(`Retry отключен для ошибки: ${lastError.message}`);
+        throw lastError;
+      }
+      
+      log.warn(`Попытка ${attempt}/${maxAttempts} для "${operationName}" завершилась неудачей: ${lastError.message}`);
+      
+      // Вызываем callback при retry
+      if (onRetry) {
+        onRetry(attempt, lastError);
+      }
       
       if (attempt < maxAttempts) {
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        const delay = exponentialBackoff ? delayMs * Math.pow(2, attempt - 1) : delayMs;
+        log.debug(`Ожидание ${delay}ms перед следующей попыткой`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
   
   throw lastError;
+}
+
+/**
+ * Retry для кликов с автоматическим ожиданием элемента
+ */
+export async function retryClick(
+  page: Page,
+  selector: string,
+  options: {
+    maxAttempts?: number;
+    timeout?: number;
+  } = {}
+): Promise<void> {
+  const { maxAttempts = 3, timeout = TIMEOUTS.DEFAULT } = options;
+  const log = logger.child('retryClick');
+  
+  await withRetry(
+    async () => {
+      const element = page.locator(selector).first();
+      await element.waitFor({ state: 'visible', timeout });
+      await element.click();
+    },
+    {
+      maxAttempts,
+      delayMs: 500,
+      operationName: `Клик по ${selector}`,
+      shouldRetry: (error) => {
+        // Retry только для определенных ошибок
+        const message = error.message.toLowerCase();
+        return message.includes('timeout') || 
+               message.includes('not visible') ||
+               message.includes('intercept') ||
+               message.includes('detached');
+      },
+    }
+  );
+}
+
+/**
+ * Retry для ввода текста
+ */
+export async function retryFill(
+  page: Page,
+  selector: string,
+  value: string,
+  options: {
+    maxAttempts?: number;
+    timeout?: number;
+    clearFirst?: boolean;
+  } = {}
+): Promise<void> {
+  const { maxAttempts = 3, timeout = TIMEOUTS.DEFAULT, clearFirst = true } = options;
+  
+  await withRetry(
+    async () => {
+      const element = page.locator(selector).first();
+      await element.waitFor({ state: 'visible', timeout });
+      if (clearFirst) {
+        await element.clear();
+      }
+      await element.fill(value);
+    },
+    {
+      maxAttempts,
+      delayMs: 500,
+      operationName: `Заполнение ${selector}`,
+    }
+  );
 }
 
 /**
