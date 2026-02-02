@@ -1,9 +1,24 @@
 import { defineConfig, devices } from '@playwright/test';
+import * as path from 'path';
 
 const isCI = !!process.env.CI;
 
 // Теги для критических сценариев с видеозаписью
 const CRITICAL_VIDEO_TAGS = ['@video', '@critical', '@auth', '@payment'];
+
+// Функция для генерации структурированного имени скриншота
+function generateScreenshotPath(testInfo: { title: string; project: { name: string }; file: string }): string {
+  const category = testInfo.file.includes('/smoke/') ? 'smoke' :
+                   testInfo.file.includes('/functional/') ? 'functional' :
+                   testInfo.file.includes('/visual/') ? 'visual' :
+                   testInfo.file.includes('/accessibility/') ? 'accessibility' : 'other';
+  
+  const browser = testInfo.project.name || 'unknown';
+  const testId = testInfo.title.match(/^([A-Z]+-\d+)/)?.[1] || 'TEST';
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  
+  return path.join('reports', 'screenshots', category, browser, `${testId}_ошибка_${timestamp}.png`);
+}
 
 export default defineConfig({
   testDir: './tests',
@@ -26,25 +41,31 @@ export default defineConfig({
           suiteTitle: true,
           categories: [
             {
-              name: 'Flaky Tests',
+              name: 'Нестабильные тесты',
               matchedStatuses: ['broken'],
               messageRegex: '.*timeout.*|.*flaky.*',
             },
             {
-              name: 'Element Not Found',
+              name: 'Элемент не найден',
               matchedStatuses: ['failed'],
               messageRegex: '.*locator.*|.*selector.*|.*element.*',
             },
             {
-              name: 'Network Issues',
+              name: 'Сетевые ошибки',
               matchedStatuses: ['broken'],
               messageRegex: '.*network.*|.*fetch.*|.*ERR_.*',
             },
+            {
+              name: 'Ошибки валидации',
+              matchedStatuses: ['failed'],
+              messageRegex: '.*expect.*|.*assertion.*|.*toBe.*',
+            },
           ],
           environmentInfo: {
-            'Node Version': process.version,
-            'OS': process.platform,
-            'Base URL': process.env.BASE_URL || 'https://dev.3snet.info',
+            'Версия Node': process.version,
+            'Операционная система': process.platform,
+            'Базовый URL': process.env.BASE_URL || 'https://dev.3snet.info',
+            'Окружение': isCI ? 'CI/CD' : 'Локальное',
           },
         }],
       ]
@@ -55,9 +76,10 @@ export default defineConfig({
           detail: true,
           suiteTitle: true,
           environmentInfo: {
-            'Node Version': process.version,
-            'OS': process.platform,
-            'Base URL': process.env.BASE_URL || 'https://dev.3snet.info',
+            'Версия Node': process.version,
+            'Операционная система': process.platform,
+            'Базовый URL': process.env.BASE_URL || 'https://dev.3snet.info',
+            'Окружение': isCI ? 'CI/CD' : 'Локальное',
           },
         }],
         ['list'],

@@ -2,6 +2,8 @@ import { Page, Locator, expect } from '@playwright/test';
 import { waitForPageReady, hasHorizontalScroll, getViewportSize } from '../utils/helpers';
 import { logger } from '../utils/logger';
 import { TIMEOUTS } from '../../config/test-data';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Базовый класс для всех Page Objects.
@@ -139,13 +141,55 @@ export abstract class BasePage {
   }
 
   /**
-   * Создание скриншота страницы
+   * Создание скриншота страницы со структурированным именованием
+   * @param category - категория теста (smoke, functional, visual, accessibility)
+   * @param testId - ID теста (например, SMOKE-01)
+   * @param description - описание скриншота
+   * @param type - тип скриншота (шаг, ошибка, сравнение)
    */
-  async takeScreenshot(name: string): Promise<Buffer> {
-    return this.page.screenshot({
-      path: `reports/screenshots/${name}.png`,
+  async takeScreenshot(
+    category: string,
+    testId: string,
+    description: string,
+    type: 'шаг' | 'ошибка' | 'сравнение' | 'результат' = 'шаг'
+  ): Promise<string> {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const sanitizedDescription = description
+      .toLowerCase()
+      .replace(/[^a-zа-яё0-9]/gi, '-')
+      .replace(/-+/g, '-')
+      .slice(0, 50);
+    
+    const fileName = `${testId}_${sanitizedDescription}_${type}_${timestamp}.png`;
+    const dirPath = path.join('reports', 'screenshots', category);
+    const filePath = path.join(dirPath, fileName);
+    
+    // Создаем директорию если не существует
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+    
+    await this.page.screenshot({
+      path: filePath,
       fullPage: true,
     });
+    
+    this.log.success(`Скриншот сохранен: ${filePath}`);
+    return filePath;
+  }
+
+  /**
+   * Создание скриншота при ошибке (упрощенный метод)
+   */
+  async takeFailureScreenshot(testId: string, errorDescription: string): Promise<string> {
+    return this.takeScreenshot('errors', testId, errorDescription, 'ошибка');
+  }
+
+  /**
+   * Создание скриншота шага теста
+   */
+  async takeStepScreenshot(category: string, testId: string, stepName: string): Promise<string> {
+    return this.takeScreenshot(category, testId, stepName, 'шаг');
   }
 
   /**
