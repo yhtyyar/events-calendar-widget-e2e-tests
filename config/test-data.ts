@@ -82,3 +82,47 @@ export const TEST_TAGS = {
   P1: '@P1',
   P2: '@P2',
 } as const;
+
+// Параметризованные тестовые данные для виджета
+export const WIDGET_TEST_DATA = {
+  // Дизайны виджета
+  DESIGNS: [
+    { name: 'modern', expectedClass: 'design-modern', description: 'Современный дизайн' },
+    { name: 'classic', expectedClass: 'design-classic', description: 'Классический дизайн' },
+    { name: 'minimal', expectedClass: 'design-minimal', description: 'Минималистичный дизайн' },
+  ],
+  
+  // Цветовые темы
+  COLOR_THEMES: [
+    { name: 'blue', primaryColor: '#0066cc', description: 'Синяя тема' },
+    { name: 'green', primaryColor: '#28a745', description: 'Зеленая тема' },
+    { name: 'red', primaryColor: '#dc3545', description: 'Красная тема' },
+  ],
+  
+  // Размеры виджета
+  SIZES: [
+    { name: 'small', width: 300, height: 200, description: 'Маленький размер' },
+    { name: 'medium', width: 400, height: 300, description: 'Средний размер' },
+    { name: 'large', width: 600, height: 400, description: 'Большой размер' },
+  ],
+} as const;
+
+// Интерфейсы для типизации
+export interface WidgetDesign {
+  name: string;
+  expectedClass: string;
+  description: string;
+}
+
+export interface WidgetTheme {
+  name: string;
+  primaryColor: string;
+  description: string;
+}
+
+export interface WidgetSize {
+  name: string;
+  width: number;
+  height: number;
+  description: string;
+}

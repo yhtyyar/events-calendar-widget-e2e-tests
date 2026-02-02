@@ -8,7 +8,7 @@ import { TIMEOUTS } from '../../config/test-data';
  * Содержит общие методы и свойства, используемые на всех страницах.
  */
 export abstract class BasePage {
-  protected readonly page: Page;
+  public readonly page: Page;
   protected readonly log = logger.child(this.constructor.name);
 
   constructor(page: Page) {
