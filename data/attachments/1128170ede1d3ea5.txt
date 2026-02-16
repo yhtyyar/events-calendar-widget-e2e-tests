@@ -1,0 +1,2 @@
+2026-02-16T20:38:10.828Z INFO [Test:EventsWidgetPage] ▶ Шаг: Переход на страницу: /eventswidget/
+2026-02-16T20:38:17.670Z INFO [Test:EventsWidgetPage] ✓ Страница загружена
