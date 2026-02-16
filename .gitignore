@@ -41,3 +41,12 @@ Thumbs.db
 PROJECT_ANALYSIS.md
 docs/CI_CD_INCIDENT_REPORT.md
 docs/PROJECT_COMPLETION.md
+docs/SETUP_GUIDE.md
+docs/GUIDE_FOR_BEGINNERS.md
+docs/INTERVIEW_QA.md
+docs/TEST_RESULTS_ANALYSIS.md
+docs/TYPESCRIPT_QA.md
+
+# Разрешаем только эти документы в git
+!docs/TEST_PLAN.md
+!docs/ALLURE_SETUP_GUIDE.md

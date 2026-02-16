@@ -115,3 +115,85 @@ jobs:
           name: allure-results-${{ matrix.project }}
           path: allure-results/
           retention-days: 7
+
+  # Генерация и публикация Allure отчёта
+  allure-report:
+    name: Generate & Deploy Allure Report
+    needs: e2e
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      # Скачиваем все allure-results от всех платформ
+      - name: Download all Allure results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: allure-results-*
+          path: allure-results
+          merge-multiple: true
+
+      # Показываем что скачали
+      - name: List downloaded artifacts
+        run: |
+          echo "=== Скачанные Allure results ==="
+          ls -la allure-results/
+          echo "=== Количество result.json файлов ==="
+          find allure-results -name "*result.json" | wc -l
+
+      # Устанавливаем Allure CLI
+      - name: Setup Allure CLI
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Allure
+        run: |
+          wget https://github.com/allure-framework/allure2/releases/download/2.25.0/allure-2.25.0.tgz
+          tar -zxvf allure-2.25.0.tgz
+          sudo mv allure-2.25.0 /opt/allure
+          sudo ln -s /opt/allure/bin/allure /usr/local/bin/allure
+          allure --version
+
+      # Генерируем HTML отчёт с историей
+      - name: Generate Allure Report
+        run: |
+          # Создаём директорию для истории если её нет
+          mkdir -p allure-history
+
+          # Генерируем отчёт
+          allure generate allure-results -o allure-report --clean
+
+          # Копируем историю для следующих запусков
+          if [ -d allure-report/history ]; then
+            cp -r allure-report/history allure-history/
+          fi
+
+          echo "=== Сгенерированный отчёт ==="
+          ls -la allure-report/
+
+      # Публикуем на GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-report
+          keep_files: false
+          full_commit_message: 'Deploy Allure Report - Run #${{ github.run_number }}'
+
+      # Комментарий к PR с ссылкой на отчёт (только для PR)
+      - name: Comment PR with Allure link
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request' && github.ref == 'refs/heads/main'
+        with:
+          script: |
+            const reportUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 📊 Allure Test Report\\n\\n✅ **Tests completed**\\n\\n🔗 **[View Full Report](${reportUrl})**\\n\\nReport will be available at: ${reportUrl}`
+            });
