@@ -19,6 +19,8 @@ jobs:
     name: Cleanup old artifacts
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    permissions:
+      actions: write
     steps:
       - name: Delete old artifacts
         uses: actions/github-script@v7
@@ -33,25 +35,37 @@ jobs:
             
             const now = new Date();
             const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 дней в миллисекундах
+            let deleted = 0;
+            let failed = 0;
+            let skipped = 0;
             
             for (const artifact of artifacts.data.artifacts) {
               const createdAt = new Date(artifact.created_at);
               const age = now - createdAt;
               
               if (age > maxAge) {
-                console.log(`Deleting artifact: ${artifact.name} (created: ${artifact.created_at})`);
-                await github.rest.actions.deleteArtifact({
-                  owner,
-                  repo,
-                  artifact_id: artifact.id
-                });
+                try {
+                  console.log(`Deleting artifact: ${artifact.name} (created: ${artifact.created_at})`);
+                  await github.rest.actions.deleteArtifact({
+                    owner,
+                    repo,
+                    artifact_id: artifact.id
+                  });
+                  deleted++;
+                } catch (error) {
+                  console.warn(`Failed to delete: ${artifact.name} — ${error.message}`);
+                  failed++;
+                }
+              } else {
+                skipped++;
               }
             }
-            console.log('Cleanup completed');
+            console.log(`Cleanup completed: ${deleted} deleted, ${failed} failed, ${skipped} skipped`);
 
   e2e:
     name: E2E (${{ matrix.project }})
     runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
     timeout-minutes: 10
     strategy:
       fail-fast: false
@@ -75,9 +89,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Install Playwright
         run: npx playwright install --with-deps ${{ matrix.browser }}

@@ -36,3 +36,8 @@ Thumbs.db
 *.tmp
 *.temp
 .cache/
+
+# Локальные документы (не для публикации)
+PROJECT_ANALYSIS.md
+docs/CI_CD_INCIDENT_REPORT.md
+docs/PROJECT_COMPLETION.md
